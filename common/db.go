@@ -14,6 +14,7 @@ func GetDBCollection(col string) *mongo.Collection {
 	return db.Collection(col)
 }
 
+// Initializes db (called by main.go) - set URI in .env file
 func InitDB() error {
 	uri := os.Getenv("MONGO_URI")
 	client, err := mongo.Connect(context.Background(), options.Client().ApplyURI(uri))

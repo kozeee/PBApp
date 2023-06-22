@@ -46,19 +46,19 @@ func run() error {
 			Views: engine,
 		})
 
-	// add basic middleware
+	// add basic middleware - we don't really use these but leaving in case needed later
 	app.Use(logger.New())
 	app.Use(recover.New())
 	app.Use(cors.New())
 
-	// add routes
+	// establish routes and endpoints
 	router.AddCTMGroup(app)
 	router.AddBIZGroup(app)
 	router.AddADDGroup(app)
 	router.AddNavGroup(app)
 	router.AddPaddleGroup(app)
 
-	// start server
+	// start server based on os or 8080 if none present
 	var port string
 	if port = os.Getenv("PORT"); port == "" {
 		port = "8080"

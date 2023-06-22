@@ -76,8 +76,9 @@
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
     <script>
         const $ = (x) => document.getElementById(x);
-        var url = "http://localhost:8080";
+        var url = "http://localhost:8080"; // could pass this via env and fiber templating
 
+        // gets ctm/subscription data and pushes it to a table
         async function emailSearch(){
             let email = $('emailInput').value
             var endpoint = url+"/ctm/email/"+email
@@ -153,7 +154,7 @@ if (data[i].scheduled_change != null){
 async function cancelSub(id){
     if (id == "nil"){ console.log('hi'); return "none";}
     let url = "http://127.0.0.1:8080/paddle/subscriptions/cancel/"
-    alert("Warning: Your subscription will be cancelled. Please log back in after cancellation is complete")
+    alert("Warning: Your subscription will be cancelled. Press OK to continue")
     let request = await axios.post(url+id)
     refreshPage()
 }

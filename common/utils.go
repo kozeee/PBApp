@@ -27,6 +27,7 @@ func DoesCtmExist(email string) interface{} {
 	return CTM
 }
 
+// Updates the ctm record in the DB (works with ctmRegistration to initalize the ctm with address/business objects after creation)
 func UpdateCtm(ctmid string, updateFields *models.CTM) error {
 	coll := GetDBCollection("CTMs")
 	filter := bson.M{"customer": ctmid}
@@ -38,16 +39,11 @@ func UpdateCtm(ctmid string, updateFields *models.CTM) error {
 	return nil
 }
 
+// Called in main.go to initialize the .env file
 func LoadEnv() error {
-	// check if prod
-	prod := os.Getenv("PROD")
-
-	if prod != "true" {
-		err := godotenv.Load()
-		if err != nil {
-			return err
-		}
+	err := godotenv.Load()
+	if err != nil {
+		return err
 	}
-
 	return nil
 }

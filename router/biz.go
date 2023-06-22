@@ -13,6 +13,7 @@ func AddBIZGroup(app *fiber.App) {
 	bizGroup.Post("/update/:id", updateBiz)
 }
 
+// mostly deprecated, returns a BIZ object based on the ctm id
 func fetchBIZ(c *fiber.Ctx) error {
 	id := c.Params("id")
 	if id == "" {
@@ -31,6 +32,7 @@ func fetchBIZ(c *fiber.Ctx) error {
 	return c.Status(200).JSON(fiber.Map{"data": BIZ})
 }
 
+// Pushes updated biz data to our paddle handler and then updates the DB if successful (see bizUtils)
 func updateBiz(c *fiber.Ctx) error {
 	id := c.Params("id")
 	business := common.DoesBizExist(id)

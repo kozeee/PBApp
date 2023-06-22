@@ -13,7 +13,6 @@ import (
 )
 
 // Set the routes to be added in main
-
 func AddCTMGroup(app *fiber.App) {
 	ctmGroup := app.Group("/ctm")
 	ctmGroup.Post("/", ctmRegister)
@@ -22,7 +21,6 @@ func AddCTMGroup(app *fiber.App) {
 
 // Takes in an email and passes to utils. Returns a CTM object (defined by customer model)
 func getCTMEmail(c *fiber.Ctx) error {
-	// find the CTM
 	email := c.Params("email")
 	if email == "" {
 		return c.Status(400).JSON(fiber.Map{
@@ -55,7 +53,7 @@ type internalCtm struct {
 	Customer string `json:"customer" bson:"customer"`
 }
 
-// Insert ctm into db - doesn't need to return the result obj
+// Deprecated used for testing ctm creation - see ctmRegistration/ctmCreate
 func internalCreateCtm(b *padCtm, customer string) string {
 	// Use the padCTM to fill out the internalCTM struct
 	coll := common.GetDBCollection("CTMs")
@@ -68,6 +66,7 @@ func internalCreateCtm(b *padCtm, customer string) string {
 	return "Success"
 }
 
+// Handles the registration request data, split off and used to create the ctm add biz objects
 type ctmRegistration struct {
 	Email         string `json:"email,omitempty"`
 	FirstLine     string `json:"street_address,omitempty"`
@@ -81,6 +80,7 @@ type ctmRegistration struct {
 	Customer      string `json:"customer,omitempty"`
 }
 
+// Attempts to create the ctm, add, and biz object in that order and return the ID of each to the front-end (allows us to checkout immediately)
 func ctmRegister(c *fiber.Ctx) error {
 	b := new(ctmRegistration)
 	if err := c.BodyParser(b); err != nil {
@@ -139,6 +139,7 @@ func ctmRegister(c *fiber.Ctx) error {
 	return c.Status(200).JSON(fiber.Map{"customerID": ctmid, "addressID": addID, "businessID": bizID})
 }
 
+// creates a CTM on paddle side and if successful pushes to the local db
 func createPaddleCTM(email string) string {
 	url, bearer := common.HttpHelper()
 	endpoint := url + "/customers"
@@ -172,6 +173,7 @@ func createPaddleCTM(email string) string {
 	return "x"
 }
 
+// creates an address on paddle side and if successful pushes to the local db
 func createPaddleAddress(ctmid string, initFields *models.ADD) string {
 	url, bearer := common.HttpHelper()
 	endpoint := url + "/customers/" + ctmid + "/addresses"
@@ -204,6 +206,7 @@ func createPaddleAddress(ctmid string, initFields *models.ADD) string {
 	return "x"
 }
 
+// creates a business on paddle side and if successful pushes to the local db
 func createPaddleBusiness(ctmid string, initFields *models.BIZ) string {
 	url, bearer := common.HttpHelper()
 	endpoint := url + "/customers/" + ctmid + "/businesses"

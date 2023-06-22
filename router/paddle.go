@@ -83,6 +83,7 @@ func padCreateCtm(c *fiber.Ctx) error {
 
 // Get all subscriptions based on a CTM id
 func padGetSubs(c *fiber.Ctx) error {
+
 	//Get our endpoint and create an http client
 	url, bearer := common.HttpHelper()
 	client := &http.Client{}
@@ -109,6 +110,7 @@ func padGetSubs(c *fiber.Ctx) error {
 	return c.Status(200).JSON(fiber.Map{"data": results["data"]})
 }
 
+// Takes in a req from the front-end and cancels on the paddle side
 type cancelMin struct {
 	EffectiveFrom string `json:"effective_from,omitempty"`
 }
@@ -139,8 +141,7 @@ func padCancelSub(c *fiber.Ctx) error {
 	return c.Status(200).JSON(fiber.Map{"data": results["data"]})
 }
 
-// Return price data - product set by an env variable currently. Could be modified to fetch products and prices
-
+// Return price data - product set by an env variable currently. Could be modified to fetch more dynamic data
 func padGetPrices(c *fiber.Ctx) error {
 	url, bearer := common.HttpHelper()
 	endpoint := url + "/prices?product_id=" + os.Getenv("testProduct")
@@ -161,10 +162,7 @@ func padGetPrices(c *fiber.Ctx) error {
 		fmt.Println("Error:", err)
 	}
 
-	// Define a map to capture the JSON response
 	var response map[string]json.RawMessage
-
-	// Unmarshal the JSON response into the map
 	err = json.Unmarshal(body, &response)
 	if err != nil {
 		fmt.Println("Error:", err)

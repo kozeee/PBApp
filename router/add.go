@@ -13,6 +13,7 @@ func AddADDGroup(app *fiber.App) {
 	addGroup.Post("/update/:id", updateAdd)
 }
 
+// mostly deprecated way to fetch address data based on ctmid
 func fetchADD(c *fiber.Ctx) error {
 	id := c.Params("id")
 	if id == "" {
@@ -31,6 +32,7 @@ func fetchADD(c *fiber.Ctx) error {
 	return c.Status(200).JSON(fiber.Map{"data": ADD})
 }
 
+// pushes Address data to the paddle handler and updates the db if successful (see addUtils)
 func updateAdd(c *fiber.Ctx) error {
 	id := c.Params("id")
 	address := common.DoesAddExist(id)
