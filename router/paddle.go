@@ -20,6 +20,7 @@ func AddPaddleGroup(app *fiber.App) {
 	ctmGroup.Get("/prices", padGetPrices)
 	ctmGroup.Get("/subscriptions/:id", padGetSubs)
 	ctmGroup.Post("/subscriptions/cancel/:id", padCancelSub)
+	ctmGroup.Post("/subscriptions/update/:id", padUpdateSub)
 }
 
 // Used to make the request to paddle
@@ -169,4 +170,34 @@ func padGetPrices(c *fiber.Ctx) error {
 	}
 
 	return c.Status(200).JSON(fiber.Map{"data": response["data"]})
+}
+
+// Creates a $0 transaction to let buyers update their sub
+func padUpdateSub(c *fiber.Ctx) error {
+
+	//Get our endpoint and create an http client
+	url, bearer := common.HttpHelper()
+	client := &http.Client{}
+
+	//fe will pass the subscription id back to us to make this request
+	id := c.Params("id")
+	endpoint := url + "/subscriptions/" + id + "/transactions"
+
+	// Make our request to paddle
+	req, _ := http.NewRequest("POST", endpoint, nil)
+	req.Header.Set("Authorization", bearer)
+	res, err := client.Do(req)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"error":   "Failed to create Transaction",
+			"message": err.Error(),
+		})
+	}
+	defer res.Body.Close()
+	response, _ := io.ReadAll(res.Body)
+	fmt.Println(string(response))
+	var results map[string]interface{}
+	json.Unmarshal([]byte(response), &results)
+
+	return c.Status(200).JSON(fiber.Map{"data": results["data"]})
 }

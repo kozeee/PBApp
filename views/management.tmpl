@@ -1,163 +1,203 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, shrink-to-fit=no"
+    />
     <title>Email Search</title>
-    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet">
+    <link
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <style>
-         body {
-      background-color: #192734;
-    }
-  .fixed-bottom-left {
-      position: fixed;
-      left: 0;
-      top: 0;
-      margin: 20px;
-    }
-    .button-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
+      body {
+        background-color: #192734;
+      }
+      .fixed-bottom-left {
+        position: fixed;
+        left: 0;
+        top: 0;
+        margin: 20px;
+      }
+      .button-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="container">
-        <div class="row">
-            <div class="container">
-              <div class = "col-md-6 my-2"><a href = "/nav/purchase" class="btn btn-primary">Checkout</a>
-                <a href="#" class="btn btn-danger" onClick="refreshPage()">Logout</a></div>
-          </div></div>
-            <div class="col-md-6 mx-auto">
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h4 class="card-title">Search By Email Address</h4>
-                    </div>
-                    <div class="card-body">
-                        <form action="javascript:emailSearch()">
-                            <div class="form-group">
-                                <input type="email" class="form-control" id="emailInput" aria-describedby="emailHelp" placeholder="Enter email">
-                            </div>
-                            <div class="button-container"><button type="submit" id="submitBtn" class="btn btn-primary">Submit</button></div>
-                            
-                        </form>
-                    </div>
-                </div>
-                
-            </div>
-            <div class="col-md-12 mx-auto">
-                <div class="card">
-                    <div class="card-header">
-                        <h4 class="card-title">Results</h4>
-                    </div>
-                    <div id="resultsBody" class="card-body">
-                        <table class="table" id="subTable">
-                            <thead>
-                              <tr>
-                                <th scope="col">Created At</th>
+      <div class="row">
+        <div class="container">
+          <div class="col-md-6 my-2">
+            <a href="/nav/purchase" class="btn btn-primary">Checkout</a>
+            <a href="#" class="btn btn-danger" onClick="refreshPage()"
+              >Logout</a
+            >
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6 mx-auto">
+        <div class="card mb-4">
+          <div class="card-header">
+            <h4 class="card-title">Search By Email Address</h4>
+          </div>
+          <div class="card-body">
+            <form action="javascript:emailSearch()">
+              <div class="form-group">
+                <input
+                  type="email"
+                  class="form-control"
+                  id="emailInput"
+                  aria-describedby="emailHelp"
+                  placeholder="Enter email"
+                />
+              </div>
+              <div class="button-container">
+                <button type="submit" id="submitBtn" class="btn btn-primary">
+                  Submit
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-12 mx-auto">
+        <div class="card">
+          <div class="card-header">
+            <h4 class="card-title">Results</h4>
+          </div>
+          <div id="resultsBody" class="card-body">
+            <table class="table" id="subTable">
+              <thead>
+                <tr>
+                  <th scope="col">Created At</th>
 
-                                <th scope="col">Status</th>
-                                <th scope="col">Cancel</th>
-                                <th scope="col">Update</th>
-                              </tr>
-                            </thead>
-                           
-                          </table>
-                        
-                    </div>
-                </div>
-            </div>             
+                  <th scope="col">Status</th>
+                  <th scope="col">Cancel</th>
+                  <th scope="col">Update</th>
+                </tr>
+              </thead>
+            </table>
+          </div>
+        </div>
+      </div>
     </div>
 
     <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+    <script src="https://cdn.paddle.com/paddle/v2/paddle.js"></script>
     <script>
-        const $ = (x) => document.getElementById(x);
-        var url = "http://localhost:8080"; // could pass this via env and fiber templating
+      const $ = (x) => document.getElementById(x);
+      var url = "http://localhost:8080"; // could pass this via env and fiber templating
+      Paddle.Environment.set("sandbox");
+      Paddle.Setup({
+        seller: 749,
+      });
+      // gets ctm/subscription data and pushes it to a table
+      async function emailSearch() {
+        let email = $("emailInput").value;
+        var endpoint = url + "/ctm/email/" + email;
+        let ctm = "";
+        axios
+          .get(endpoint)
+          .then(function (res) {
+            $("submitBtn").style.display = "none";
+            ctm = res.data.data.customer;
+            axios
+              .get(url + "/paddle/subscriptions/" + ctm)
+              .then(function (res) {
+                let data = res.data.data;
+                if (data.length < 1) {
+                  alert("No Subscriptions Found");
+                } else {
+                  for (i in res.data.data) {
+                    //  console.log(res.data.data)
+                    let newRow = document.createElement("tr");
+                    let time = document.createElement("td");
+                    let conversion = new Date(data[i].created_at);
+                    let status = document.createElement("td");
+                    let cancelurl = document.createElement("td");
+                    let updateurl = document.createElement("td");
 
-        // gets ctm/subscription data and pushes it to a table
-        async function emailSearch(){
-            let email = $('emailInput').value
-            var endpoint = url+"/ctm/email/"+email
-            let ctm = ""
-            axios.get(endpoint)
-            .then(function(res) {
-            $("submitBtn").style.display = "none"
-            ctm = res.data.data.customer
-            axios.get(url+"/paddle/subscriptions/"+ctm)
-            .then(function(res){
-                let data = res.data.data
-                if (data.length < 1){
-                    alert("No Subscriptions Found")
-                }else{
-                    for (i in res.data.data) {
-                        console.log(res.data.data)
-  let newRow = document.createElement('tr');
-  let time = document.createElement('td');
-  let conversion = new Date(data[i].created_at);
-  let status = document.createElement('td');
-  let cancelurl = document.createElement('td');
-  let updateurl = document.createElement('td');
+                    time.innerHTML = conversion.toLocaleDateString();
+                    status.innerHTML = data[i].status;
 
-  time.innerHTML = conversion.toLocaleDateString();
-  status.innerHTML = data[i].status;
+                    let cancelButton = document.createElement("button");
+                    cancelButton.textContent = "Cancel";
+                    cancelButton.className = "btn btn-danger";
+                    cancelButton.onclick = function () {
+                      cancelSub(data[i].id);
+                    };
 
-  let cancelButton = document.createElement('button');
-  cancelButton.textContent = 'Cancel';
-  cancelButton.className = "btn btn-danger"
-  cancelButton.onclick = function() {
-    cancelSub(data[i].id)
-};
+                    if (data[i].scheduled_change != null) {
+                      if (data[i].scheduled_change.action == "cancel") {
+                        let cancellationDate = new Date(
+                          data[i].scheduled_change.effective_at
+                        ).toLocaleDateString();
+                        cancelButton.style.display = "none";
+                        status.textContent =
+                          "Cancelling on: " + cancellationDate;
+                      }
+                    }
 
-if (data[i].scheduled_change != null){
-    if (data[i].scheduled_change.action == "cancel"){
-    let cancellationDate = new Date(data[i].scheduled_change.effective_at).toLocaleDateString()
-    cancelButton.style.display = "none"
-    status.textContent = "Cancelling on: "+cancellationDate}
-}
+                    cancelurl.appendChild(cancelButton);
 
+                    let updateButton = document.createElement("button");
+                    updateButton.textContent = "Update";
+                    updateButton.className = "btn btn-secondary";
+                    updateButton.onclick = function () {
+                      updateSub(data[i].id);
+                    };
 
+                    cancelurl.appendChild(cancelButton);
+                    updateurl.appendChild(updateButton);
 
-  cancelurl.appendChild(cancelButton);
-
-  let updateButton = document.createElement('button');
-  updateButton.textContent = 'Update';
-  updateButton.className = "btn btn-secondary"
-
-  cancelurl.appendChild(cancelButton);
-  updateurl.appendChild(updateButton);
-
-
-
-  newRow.appendChild(time);
-  newRow.appendChild(status);
-  newRow.appendChild(cancelurl);
-  newRow.appendChild(updateurl);
-  $('subTable').appendChild(newRow);
-  
-}
-
+                    newRow.appendChild(time);
+                    newRow.appendChild(status);
+                    newRow.appendChild(cancelurl);
+                    newRow.appendChild(updateurl);
+                    $("subTable").appendChild(newRow);
+                  }
                 }
-            })
-})
-.catch(function(error) {
-    alert("Sorry, this email address is not in our system.")
-})
-        }
-        function refreshPage(){
-    window.location.reload();
-} 
+              });
+          })
+          .catch(function (error) {
+            alert("Sorry, this email address is not in our system.");
+          });
+      }
+      function refreshPage() {
+        window.location.reload();
+      }
 
-async function cancelSub(id){
-    if (id == "nil"){ console.log('hi'); return "none";}
-    let url = "http://127.0.0.1:8080/paddle/subscriptions/cancel/"
-    alert("Warning: Your subscription will be cancelled. Press OK to continue")
-    let request = await axios.post(url+id)
-    refreshPage()
-}
-</script>
-</body>
+      async function cancelSub(id) {
+        let url = "http://127.0.0.1:8080/paddle/subscriptions/cancel/";
+        alert(
+          "Warning: Your subscription will be cancelled. Press OK to continue"
+        );
+        let request = await axios.post(url + id);
+        refreshPage();
+      }
+
+      async function updateSub(id) {
+        let url = "http://127.0.0.1:8080/paddle/subscriptions/update/";
+        let request = await axios.post(url + id);
+        openPaddle(request.data.data.id);
+      }
+
+      function openPaddle(txn){
+        Paddle.Checkout.open({
+        settings: {
+          displayMode: "overlay",
+        },
+        transactionId:txn
+      });
+      }
+    </script>
+  </body>
 </html>
