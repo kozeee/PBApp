@@ -143,7 +143,7 @@
     async function fetchProducts() {
       $("cRow").style.display="none"
       $("abRow").style.display="none"
-      let res = await axios.get('http://127.0.0.1:8080/paddle/prices')
+      let res = await axios.get('http://localhost:8080/paddle/prices')
       for (item in res.data) {
         for (price in res.data[item]) {
           let product = res.data[item][price]
@@ -212,7 +212,7 @@
     async function checkEmail() {
       let email = $('email').value
       if (validateEmail(email)) {
-        let resp = await axios.get("http://127.0.0.1:8080/ctm/email/" + email)
+        let resp = await axios.get("http://localhost:8080/ctm/email/" + email)
         if (resp.data.biz != null){
           $('addForm').style.display='block'
           $("BusinessForm").style.display = "block"
@@ -526,7 +526,7 @@ async function updateAddress(){
         "postal_code": $("postalCode").value,
         "country_code":  $("country").value,
 }
-let resp = await axios.post("http://127.0.0.1:8080/add/update/" + id, address)
+let resp = await axios.post("http://localhost:8080/add/update/" + id, address)
 return "ok"
         }  
 
@@ -538,7 +538,7 @@ return "ok"
           "company_number": $("companyNum").value,
          "tax_identifier": $("tin").value,
 }
-let resp = await axios.post("http://127.0.0.1:8080/biz/update/" + id, business)
+let resp = await axios.post("http://localhost:8080/biz/update/" + id, business)
 console.log(resp)
         }  
   
@@ -558,7 +558,7 @@ for (i in customer){
   if (customer[i] == ""){alert("please fill out: "+ i); return;}
 }
 
-let resp = await axios.post("http://127.0.0.1:8080/ctm",customer)
+let resp = await axios.post("http://localhost:8080/ctm",customer)
 $("ctmID").value = resp.data.customerID
 $("addID").value = resp.data.addressID
 $("bizID").value = resp.data.businessID

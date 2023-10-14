@@ -2,6 +2,7 @@ package common
 
 import (
 	"context"
+	"fmt"
 	"os"
 
 	"go.mongodb.org/mongo-driver/mongo"
@@ -19,6 +20,7 @@ func InitDB() error {
 	uri := os.Getenv("MONGO_URI")
 	client, err := mongo.Connect(context.Background(), options.Client().ApplyURI(uri))
 	if err != nil {
+		fmt.Println(err)
 		return err
 	}
 

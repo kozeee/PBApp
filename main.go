@@ -63,7 +63,7 @@ func run() error {
 	if port = os.Getenv("PORT"); port == "" {
 		port = "8080"
 	}
-	app.Listen(":" + port)
+	app.Listen("0.0.0.0:" + port)
 
 	return nil
 }

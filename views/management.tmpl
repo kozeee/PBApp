@@ -27,6 +27,36 @@
         justify-content: center;
         align-items: center;
       }
+
+      /* Add your modal styles here */
+      .modal {
+        display: none;
+        background-color: rgba(0, 0, 0, 0.5);
+        overflow:scroll;
+        
+      }
+
+      .subModal {
+        display: none;
+        background-color: rgba(0, 0, 0, 0.5);
+        overflow:scroll;
+        
+      }
+
+      .modal-content {
+        background-color: white;
+        padding: 20px;
+        border-radius: 5px;
+        box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.5);
+      }
+
+      .close {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        font-size: 20px;
+        cursor: pointer;
+      }
     </style>
   </head>
   <body>
@@ -79,13 +109,56 @@
 
                   <th scope="col">Status</th>
                   <th scope="col">Cancel</th>
-                  <th scope="col">Update</th>
+                  <th scope="col">Update Payment Method</th>
+                  <th scope="col">More Info</th>
                 </tr>
               </thead>
             </table>
           </div>
         </div>
       </div>
+      <div class="col-md-12 mx-8">
+        <div id="modal" class="modal" style="display:none"> 
+          <div class="modal-content">
+            <div class="card-header">
+              <h4 class="card-title">Subscription Details</h4>
+            </div>
+            <div class="card-body">
+              <pre id="subdata"></pre>
+              <div id="subModification" style="display:none">
+                <table class="table" id="subUpdateTable">
+                  <form>
+                  <thead>
+                    
+                    <tr>
+                      <th scope="col">Item Name</th>
+                      <th scope="col">Item Price</th>
+                      <th scope="col">Quantity</th>
+                      <th scope = "col">Select</th>
+                    </tr>
+                  </thead>
+                </form>
+                </table>
+              </div>
+              <div id="subPreview" style="display:none">
+                <pre id="subPreviewData"></pre>
+              </div>
+            </div>
+            <div id="modalFooter"  class="card-footer">
+              <button class="btn btn-danger" onclick="closemodal()">Close</button>
+              <button class = "btn btn-primary" onclick="fetchTransactions()">Get Transaction PDF</button>
+              <button class = "btn btn-secondary" onclick="displaySubModal()">Change Plan</button>
+            </div>
+            <div id="subUpdateFooter" class="card-footer" style="display:none">
+              <button class="btn btn-danger" onclick="closeSubmodal()">Back</button>
+            </div>
+            <div id="subPreviewFooter" class="card-footer" style="display:none">
+              <button class="btn btn-danger" onclick="closeSubPreviewmodal()">Back</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
     </div>
 
     <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
@@ -94,6 +167,7 @@
     <script src="https://cdn.paddle.com/paddle/v2/paddle.js"></script>
     <script>
       const $ = (x) => document.getElementById(x);
+      let priceList = []
       var url = "http://localhost:8080"; // could pass this via env and fiber templating
       Paddle.Environment.set("sandbox");
       Paddle.Setup({
@@ -124,6 +198,7 @@
                     let status = document.createElement("td");
                     let cancelurl = document.createElement("td");
                     let updateurl = document.createElement("td");
+                    let moreurl = document.createElement("td");
 
                     time.innerHTML = conversion.toLocaleDateString();
                     status.innerHTML = data[i].status;
@@ -150,11 +225,20 @@
 
                     let updateButton = document.createElement("button");
                     updateButton.textContent = "Update";
-                    updateButton.className = "btn btn-secondary";
+                    updateButton.className = "btn btn-primary";
                     updateButton.onclick = function () {
                       updateSub(data[i].id);
                     };
 
+                    let moreButton = document.createElement("button");
+                    moreButton.textContent = "More";
+                    moreButton.id = data[i].id;
+                    moreButton.className = "btn btn-info";
+                    moreButton.onclick = function () {
+                      displaySubscriptionInfo(data[i]);
+                    };
+
+                    moreurl.appendChild(moreButton);
                     cancelurl.appendChild(cancelButton);
                     updateurl.appendChild(updateButton);
 
@@ -162,6 +246,7 @@
                     newRow.appendChild(status);
                     newRow.appendChild(cancelurl);
                     newRow.appendChild(updateurl);
+                    newRow.appendChild(moreurl);
                     $("subTable").appendChild(newRow);
                   }
                 }
@@ -176,7 +261,7 @@
       }
 
       async function cancelSub(id) {
-        let url = "http://127.0.0.1:8080/paddle/subscriptions/cancel/";
+        let url = "http://localhost:8080/paddle/subscriptions/cancel/";
         alert(
           "Warning: Your subscription will be cancelled. Press OK to continue"
         );
@@ -185,19 +270,191 @@
       }
 
       async function updateSub(id) {
-        let url = "http://127.0.0.1:8080/paddle/subscriptions/update/";
+        let url = "http://localhost:8080/paddle/subscriptions/update/";
         let request = await axios.post(url + id);
         openPaddle(request.data.data.id);
       }
 
-      function openPaddle(txn){
+      function openPaddle(txn) {
         Paddle.Checkout.open({
-        settings: {
-          displayMode: "overlay",
-        },
-        transactionId:txn
-      });
+          settings: {
+            displayMode: "overlay",
+          },
+          transactionId: txn,
+        });
       }
+
+
+      // Function to populate the modal with subscription information
+      function displaySubscriptionInfo(subData) {
+        const subscriptionInfo = subData
+        let pauseControl = document.createElement('button')
+        pauseControl.classList.add('btn')
+
+        if (subData.scheduled_change === null && subData.status == 'active'){
+          pauseControl.innerText = 'Pause Subscription'
+          pauseControl.classList.add('btn-danger')
+          pauseControl.onclick = () => pauseSubscription(subData.id)
+        }
+        else if (subData.paused_at != null && subData.scheduled_change.action != "pause"){
+          pauseControl.innerText = 'Unpause Subscription'
+          pauseControl.classList.add('btn-success')
+          pauseControl.onclick = () => unpauseSubscription(subData.id,"immediately")
+        }
+        else if (subData.scheduled_change.action == "pause"){
+          pauseControl.innerText = 'Unpause Subscription'
+          pauseControl.classList.remove('btn-danger')
+          pauseControl.classList.add('btn-success')
+          pauseControl.onclick = () => unpauseSubscription(subData.id,"next_billing_period")
+        }
+
+        // Display the JSON data in the modal
+        $('subdata').textContent = JSON.stringify(subscriptionInfo, null, 4);
+        $('modalFooter').appendChild(pauseControl)
+        $('modal').style.display = 'block';
+        $('modal').dataset.subscription = subData.id
+      }
+      function closemodal(){
+        $('modal').style.display = 'none';
+      }
+
+      async function fetchTransactions(){
+        let subID = $('modal').dataset.subscription
+        let url = "http://localhost:8080/paddle/subscriptions/transactions/"
+        let transactions = await axios.post(url+subID)
+        window.open(
+          transactions.data.data.data.url);
+      }
+
+     async function displaySubModal(){
+        const table = $('subUpdateTable')
+        let url = "http://localhost:8080/paddle/prices"
+        let response = await axios.get(url)
+        let prices = response.data.data
+        for (i in prices){
+          if (prices[i].status == 'active' && prices[i].billing_cycle != null){
+            let id = prices[i].id
+            priceList.push(id)
+            let newRow = document.createElement('tr')
+
+          let itemName = document.createElement('td')
+          itemName.innerText = prices[i].description
+
+          let itemPrice = document.createElement('td')
+          let itemUnitPrice = parseFloat(prices[i].unit_price.amount / 100).toFixed(2)
+          itemPrice.innerText = itemUnitPrice + " " + prices[i].unit_price.currency_code
+
+          let itemQuantity = document.createElement('input')
+          console.log("creating:" + id)
+          itemQuantity.id = id
+          itemQuantity.type = 'number'
+          itemQuantity.min = prices[i].quantity.minimum
+          itemQuantity.max = prices[i].quantity.maximum
+
+          let itemSelect = document.createElement('td')
+          itemSelect.classList.add('btn')
+          itemSelect.classList.add('btn-primary')
+          itemSelect.innerText = 'Change Plan'
+          itemSelect.onclick =() => changePlan(id)
+
+          newRow.appendChild(itemName)
+          newRow.appendChild(itemPrice)
+          newRow.appendChild(itemQuantity)
+          newRow.appendChild(itemSelect)
+          table.appendChild(newRow)
+          }
+
+        }
+        $('subdata').style.display = 'none';
+        $('modalFooter').style.display="none";
+
+        $('subModification').style.display="block";
+        $('subUpdateFooter').style.display="block";
+      }
+      function closeSubmodal(){
+        $('subModification').style.display = 'none';
+        $('subUpdateFooter').style.display="none";
+
+        $('subdata').style.display = 'block';
+        $('modalFooter').style.display="block";
+      }
+      function closeSubPreviewmodal(){
+        $('subPreview').style.display = 'none';
+        $('subPreviewFooter').style.display="none";
+
+        $('subModification').style.display = 'block';
+        $('subUpdateFooter').style.display="block";
+      }
+      
+      async function changePlan(id){
+        let subscription = $('modal').dataset.subscription
+        let price = $(id)
+        let priceID = $(id).id
+        let quant = parseInt(price.value)
+
+        let url = "http://localhost:8080/paddle/subscriptions/change/preview/"+subscription
+        let requestbody = {
+          items:[{"price_id":priceID,"quantity":quant}],
+          "proration_billing_mode":'prorated_immediately'
+        }
+        let response = await axios.post(url,requestbody)
+        let responsedata = response.data.data
+
+        $('subModification').style.display = 'none';
+        $('subUpdateFooter').style.display="none";
+        $('subPreview').style.display = 'block';
+        $('subPreviewFooter').style.display="block";
+
+        let confirmPurchase = document.createElement('button')
+        confirmPurchase.innerText = "Confirm Update"
+        confirmPurchase.onclick =() => changePlanConfirm(requestbody, subscription)
+
+        let subTransaction =  document.createElement('p')
+        if (responsedata.immediate_transaction != null){
+          subTransaction.innerText = "Due Today: "+ parseFloat(responsedata.immediate_transaction.details.totals.grand_total / 100).toFixed(2) + " " + responsedata.currency_code
+        } else (subTransaction.innerText = "Due Today: 0 ") + responsedata.currency_code
+
+        let nextTransaction = document.createElement('p')
+        if (responsedata.next_transaction != null){
+          nextTransaction.innerText = "Due Next Billing Period: "+ parseFloat(responsedata.next_transaction.details.totals.grand_total / 100).toFixed(2) + " " + responsedata.currency_code
+        } else (nextTransaction.innerText = "Due Next Billing Period: 0 ") + responsedata.currency_code
+        
+        $('subPreviewData').appendChild(confirmPurchase)
+        $('subPreviewData').appendChild(subTransaction)
+        $('subPreviewData').appendChild(nextTransaction)
+        
+      }
+
+      async function changePlanConfirm (requestbody,subscription){
+        let url = "http://localhost:8080/paddle/subscriptions/change/"+subscription
+        let response = await axios.post(url,requestbody)
+        let responsedata = response.data.data
+        console.log(responsedata)
+      } 
+
+      async function pauseSubscription(id){
+        let url = "http://localhost:8080/paddle/subscriptions/update/pause/"+id
+        let requestbody = {
+          "effective_from":"next_billing_period"
+        }
+        let response = await axios.post(url,requestbody)
+        let responsedata = response.data.data
+        console.log(responsedata)
+      }
+
+      async function unpauseSubscription(id,from){
+        let url = "http://localhost:8080/paddle/subscriptions/update/unpause/"+id
+        let requestbody = {
+          "effective_from":from
+        }
+        let response = await axios.post(url,requestbody)
+        let responsedata = response.data.data
+        console.log(typeof(from))
+        console.log(requestbody)
+        console.log(responsedata)
+      }
+
+
     </script>
   </body>
 </html>

@@ -21,6 +21,12 @@ func AddPaddleGroup(app *fiber.App) {
 	ctmGroup.Get("/subscriptions/:id", padGetSubs)
 	ctmGroup.Post("/subscriptions/cancel/:id", padCancelSub)
 	ctmGroup.Post("/subscriptions/update/:id", padUpdateSub)
+	ctmGroup.Post("/subscriptions/update/pause/:id", padPauseSub)
+	ctmGroup.Post("/subscriptions/update/unpause/:id", padUnpauseSub)
+	ctmGroup.Post("/subscriptions/transactions/:id", padFetchTransactions)
+	ctmGroup.Post("/subscriptions/change/:id", padChangePlans)
+	ctmGroup.Post("/subscriptions/change/preview/:id", padPreviewPlans)
+
 }
 
 // Used to make the request to paddle
@@ -199,5 +205,227 @@ func padUpdateSub(c *fiber.Ctx) error {
 	var results map[string]interface{}
 	json.Unmarshal([]byte(response), &results)
 
+	return c.Status(200).JSON(fiber.Map{"data": results["data"]})
+}
+
+func padFetchTransactions(c *fiber.Ctx) error {
+	//Get our endpoint and create an http client
+	url, bearer := common.HttpHelper()
+	client := &http.Client{}
+
+	//Convert the data to padCTM and marshall to json
+	id := c.Params("id")
+	endpoint := url + "/transactions?status=completed&subscription_id=" + id
+
+	// Make our request to paddle, create the customer in the db then respond with the ctm id
+	req, _ := http.NewRequest("GET", endpoint, nil)
+	req.Header.Set("Authorization", bearer)
+	res, err := client.Do(req)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"error":   "Could not retrieve transaction data",
+			"message": err.Error(),
+		})
+	}
+	defer res.Body.Close()
+	response, _ := io.ReadAll(res.Body)
+	var results map[string]interface{}
+	json.Unmarshal([]byte(response), &results)
+
+	dataSlice, dataOk := results["data"].([]interface{})
+	if dataOk {
+		// Iterate through the "data" slice
+		for _, item := range dataSlice {
+			// Each item in the slice is a map[string]interface{}
+			itemMap, mapOk := item.(map[string]interface{})
+			if mapOk {
+				// Access the "ID" field from the item map
+				id, idOk := itemMap["id"].(string)
+				if idOk {
+					// You have successfully accessed the "ID" field
+					endpoint = url + "/transactions/" + id + "/invoice"
+					fmt.Println(endpoint)
+					req, _ := http.NewRequest("GET", endpoint, nil)
+					req.Header.Set("Authorization", bearer)
+					res, err := client.Do(req)
+					if err != nil {
+						return c.Status(500).JSON(fiber.Map{
+							"error":   "Could not retrieve transaction data",
+							"message": err.Error(),
+						})
+					}
+					defer res.Body.Close()
+					response, _ := io.ReadAll(res.Body)
+					var results map[string]interface{}
+					json.Unmarshal([]byte(response), &results)
+					return c.Status(200).JSON(fiber.Map{"data": results})
+
+				} else {
+					fmt.Println(endpoint)
+				}
+			} else {
+				// Handle the case where an item is not a map
+			}
+		}
+	} else {
+		// Handle the case where "data" is not a slice of interface{}
+	}
+	return c.Status(400).JSON(fiber.Map{"data": "Failed to return an ID"})
+
+}
+
+type padSubPlan struct {
+	Items []struct {
+		PriceID  string `json:"price_id"`
+		Quantity int    `json:"quantity"`
+	} `json:"items"`
+	ProrationBillingMode string `json:"proration_billing_mode"`
+}
+
+func padPreviewPlans(c *fiber.Ctx) error {
+	b := new(padSubPlan)
+	id := c.Params("id")
+	url, bearer := common.HttpHelper()
+	endpoint := url + "/subscriptions/" + id + "/preview"
+	client := &http.Client{}
+
+	if err := c.BodyParser(b); err != nil {
+		return c.Status(400).JSON(fiber.Map{
+			"error": err,
+		})
+	}
+	sendReq, _ := json.Marshal(b)
+
+	req, err := http.NewRequest("PATCH", endpoint, bytes.NewBuffer(sendReq))
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"error":   "Failed to create CTM",
+			"message": err.Error(),
+		})
+	}
+	req.Header.Set("Authorization", bearer)
+	res, err := client.Do(req)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"error":   "Failed to create CTM",
+			"message": err.Error(),
+		})
+	}
+	defer res.Body.Close()
+	response, _ := io.ReadAll(res.Body)
+	var results map[string]interface{}
+	json.Unmarshal([]byte(response), &results)
+	return c.Status(200).JSON(fiber.Map{"data": results["data"]})
+}
+
+func padChangePlans(c *fiber.Ctx) error {
+	b := new(padSubPlan)
+	id := c.Params("id")
+	url, bearer := common.HttpHelper()
+	endpoint := url + "/subscriptions/" + id
+	client := &http.Client{}
+
+	if err := c.BodyParser(b); err != nil {
+		return c.Status(400).JSON(fiber.Map{
+			"error": err,
+		})
+	}
+	sendReq, _ := json.Marshal(b)
+
+	req, err := http.NewRequest("PATCH", endpoint, bytes.NewBuffer(sendReq))
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"error":   "Failed to create CTM",
+			"message": err.Error(),
+		})
+	}
+	req.Header.Set("Authorization", bearer)
+	res, err := client.Do(req)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"error":   "Failed to create CTM",
+			"message": err.Error(),
+		})
+	}
+	defer res.Body.Close()
+	response, _ := io.ReadAll(res.Body)
+	var results map[string]interface{}
+	json.Unmarshal([]byte(response), &results)
+	return c.Status(200).JSON(fiber.Map{"data": results["data"]})
+}
+
+type padPauseController struct {
+	EffectiveFrom string `json:"effective_from"`
+}
+
+func padPauseSub(c *fiber.Ctx) error {
+	b := new(padPauseController)
+	id := c.Params("id")
+	url, bearer := common.HttpHelper()
+	endpoint := url + "/subscriptions/" + id + "/pause"
+	client := &http.Client{}
+
+	if err := c.BodyParser(b); err != nil {
+		return c.Status(400).JSON(fiber.Map{
+			"error": err,
+		})
+	}
+	sendReq, _ := json.Marshal(b)
+
+	req, err := http.NewRequest("POST", endpoint, bytes.NewBuffer(sendReq))
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"error":   "Failed to create CTM",
+			"message": err.Error(),
+		})
+	}
+	req.Header.Set("Authorization", bearer)
+	res, err := client.Do(req)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"error":   "Failed to create CTM",
+			"message": err.Error(),
+		})
+	}
+	defer res.Body.Close()
+	response, _ := io.ReadAll(res.Body)
+	var results map[string]interface{}
+	json.Unmarshal([]byte(response), &results)
+	return c.Status(200).JSON(fiber.Map{"data": results["data"]})
+}
+
+func padUnpauseSub(c *fiber.Ctx) error {
+	b := new(padPauseController)
+	id := c.Params("id")
+	url, bearer := common.HttpHelper()
+	endpoint := url + "/subscriptions/" + id + "/resume"
+	client := &http.Client{}
+
+	if err := c.BodyParser(b); err != nil {
+		return c.Status(400).JSON(fiber.Map{
+			"error": err,
+		})
+	}
+	sendReq, _ := json.Marshal(b)
+
+	req, err := http.NewRequest("POST", endpoint, bytes.NewBuffer(sendReq))
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"error":   "Failed to create CTM",
+			"message": err.Error(),
+		})
+	}
+	req.Header.Set("Authorization", bearer)
+	res, err := client.Do(req)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"error":   "Failed to create CTM",
+			"message": err.Error(),
+		})
+	}
+	defer res.Body.Close()
+	response, _ := io.ReadAll(res.Body)
+	var results map[string]interface{}
+	json.Unmarshal([]byte(response), &results)
 	return c.Status(200).JSON(fiber.Map{"data": results["data"]})
 }
