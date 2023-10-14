@@ -1,7 +1,12 @@
+# Oct 2023
+This project will no longer be updated - if you have any questions about the project feel free to reach out.
+
 # Paddle Billing Demo
 Demo includes the ability to create customers, subscribers, and businesses
-Subscription creation through checkout, and cancellation through management API (update to be implemented later)
+Subscription creation through checkout, and cancellation through management API
+Allows users to view subscription data and update plans (including line-item changes)
 Syncs data with Paddle before changing db records - Strictly enforces parity with Paddle (assumes paddle data is always most up-to-date)
+
 
 ## Env
 .env file is expected in the root PBApp Directory
